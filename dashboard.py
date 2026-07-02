@@ -190,17 +190,17 @@ class KioskApp:
         self.btn_ssh.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.update_ssh_button_loop()
 
-        # CardButton 4: System Control
-        self.btn_system = CardButton(
+        # CardButton 4: BTOP Monitor
+        self.btn_btop = CardButton(
             self.content, 
-            icon="⚙️", 
-            title="SYSTEM DAYA", 
-            subtitle="Reboot/Shutdown",
+            icon="📊", 
+            title="BTOP MONITOR", 
+            subtitle="Visual Monitor",
             bg_color="#d97706",
             hover_color="#b45309",
-            command=self.show_system_dialog
+            command=self.buka_btop
         )
-        self.btn_system.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
+        self.btn_btop.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
         # ------------------- BOTTOM STATS BAR -------------------
         self.stats_bar = tk.Frame(window, bg="#1e293b", height=42)
@@ -423,91 +423,32 @@ class KioskApp:
         except Exception as e:
             messagebox.showerror("Error SSH", f"Gagal mengontrol SSH: {e}")
 
-    # ------------------- SYSTEM DAYA CONTROL -------------------
-    def show_system_dialog(self):
-        self.sys_dialog = tk.Toplevel(self.window)
-        self.sys_dialog.title("Kontrol Sistem")
-        self.sys_dialog.geometry("320x180")
-        self.sys_dialog.configure(bg="#0f172a")
-        self.sys_dialog.resizable(False, False)
-        
-        self.sys_dialog.transient(self.window)
-        self.sys_dialog.grab_set()
-
-        lbl = tk.Label(
-            self.sys_dialog, 
-            text="⚙️ KONTROL SISTEM", 
-            font=(FONT_FAMILY, 12, "bold"), 
-            bg="#0f172a", fg="#f8fafc"
-        )
-        lbl.pack(pady=18)
-
-        btn_frame = tk.Frame(self.sys_dialog, bg="#0f172a")
-        btn_frame.pack(fill="x", padx=20)
-
-        btn_reboot = tk.Button(
-            btn_frame,
-            text="🔄 REBOOT",
-            font=(FONT_FAMILY, 10, "bold"),
-            bg="#3b82f6", fg="white",
-            activebackground="#2563eb", activeforeground="white",
-            relief="flat", bd=0, height=2,
-            command=self.sys_reboot
-        )
-        btn_reboot.pack(side="left", fill="x", expand=True, padx=5)
-        btn_reboot.bind("<Enter>", lambda e: btn_reboot.configure(bg="#2563eb"))
-        btn_reboot.bind("<Leave>", lambda e: btn_reboot.configure(bg="#3b82f6"))
-
-        btn_shutdown = tk.Button(
-            btn_frame,
-            text="🛑 SHUTDOWN",
-            font=(FONT_FAMILY, 10, "bold"),
-            bg="#ef4444", fg="white",
-            activebackground="#dc2626", activeforeground="white",
-            relief="flat", bd=0, height=2,
-            command=self.sys_shutdown
-        )
-        btn_shutdown.pack(side="right", fill="x", expand=True, padx=5)
-        btn_shutdown.bind("<Enter>", lambda e: btn_shutdown.configure(bg="#dc2626"))
-        btn_shutdown.bind("<Leave>", lambda e: btn_shutdown.configure(bg="#ef4444"))
-
-        btn_cancel = tk.Button(
-            self.sys_dialog,
-            text="Batal",
-            font=(FONT_FAMILY, 9),
-            bg="#475569", fg="white",
-            activebackground="#334155", activeforeground="white",
-            relief="flat", bd=0,
-            command=self.sys_dialog.destroy
-        )
-        btn_cancel.pack(pady=15, side="bottom")
-        btn_cancel.bind("<Enter>", lambda e: btn_cancel.configure(bg="#334155"))
-        btn_cancel.bind("<Leave>", lambda e: btn_cancel.configure(bg="#475569"))
-
-    def sys_reboot(self):
-        if messagebox.askyesno("Reboot Sistem", "Sistem akan segera dijalankan ulang. Lanjutkan?"):
-            self.sys_dialog.destroy()
-            try:
-                if os.name == 'nt':
-                    subprocess.run(["shutdown", "/r", "/t", "0"])
-                else:
-                    subprocess.run(["sudo", "reboot"])
-            except Exception as e:
-                messagebox.showerror("Error", f"Gagal reboot: {e}")
-
-    def sys_shutdown(self):
-        if messagebox.askyesno("Shutdown Sistem", "Sistem akan segera dimatikan. Lanjutkan?"):
-            self.sys_dialog.destroy()
-            try:
-                if os.name == 'nt':
-                    subprocess.run(["shutdown", "/s", "/t", "0"])
-                else:
-                    subprocess.run(["sudo", "poweroff"])
-            except Exception as e:
-                messagebox.showerror("Error", f"Gagal shutdown: {e}")
+    # ------------------- BTOP MONITOR -------------------
+    def buka_btop(self):
+        try:
+            if os.name == 'nt':
+                # Di Windows, buka cmd lalu jalankan btop jika ada
+                subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop"])
+            else:
+                # Di Raspberry Pi/Linux, jalankan btop di dalam lxterminal
+                subprocess.Popen(["lxterminal", "-e", "btop"])
+        except Exception as e:
+            messagebox.showerror("Error BTOP", f"Gagal membuka BTOP: {e}")
 
     # ------------------- WI-FI CONNECTION DIALOG -------------------
+    def close_wifi_dialog(self):
+        try:
+            self.wifi_dialog.destroy()
+        except Exception:
+            pass
+        self.reset_screensaver_timer()
+
     def show_wifi_dialog(self):
+        # Batalkan timer screensaver agar tidak aktif saat dialog WiFi terbuka
+        if hasattr(self, "ss_timer_job") and self.ss_timer_job:
+            self.window.after_cancel(self.ss_timer_job)
+            self.ss_timer_job = None
+
         self.wifi_dialog = tk.Toplevel(self.window)
         self.wifi_dialog.title("Setup Jaringan Wi-Fi")
         self.wifi_dialog.geometry("380x250")
@@ -516,6 +457,7 @@ class KioskApp:
         
         self.wifi_dialog.transient(self.window)
         self.wifi_dialog.grab_set()
+        self.wifi_dialog.protocol("WM_DELETE_WINDOW", self.close_wifi_dialog)
 
         lbl = tk.Label(
             self.wifi_dialog, 
@@ -591,7 +533,7 @@ class KioskApp:
             bg="#475569", fg="white",
             activebackground="#334155", activeforeground="white",
             relief="flat", bd=0, height=2,
-            command=self.wifi_dialog.destroy
+            command=self.close_wifi_dialog
         )
         btn_cancel.pack(side="right", fill="x", expand=True, padx=5)
         btn_cancel.bind("<Enter>", lambda e: btn_cancel.configure(bg="#334155"))
@@ -674,7 +616,7 @@ class KioskApp:
                 self.ip_address = self.get_ip_address()
                 self.lbl_ip.configure(text=f"IP: {self.ip_address}")
                 messagebox.showinfo("Sukses WiFi", f"Berhasil terhubung ke Wi-Fi: {ssid}!")
-                self.wifi_dialog.destroy()
+                self.close_wifi_dialog()
             else:
                 messagebox.showerror("Gagal WiFi", f"Gagal menghubungkan ke Wi-Fi: {ssid}. Silakan periksa kembali password Anda.")
         except Exception:
@@ -690,8 +632,8 @@ class KioskApp:
         if hasattr(self, "ss_timer_job") and self.ss_timer_job:
             self.window.after_cancel(self.ss_timer_job)
             
-        # Jadwalkan kemunculan screensaver setelah 10 detik (10000 milidetik) idle
-        self.ss_timer_job = self.window.after(10000, self.show_screensaver)
+        # Jadwalkan kemunculan screensaver setelah 60 detik (60000 milidetik) idle
+        self.ss_timer_job = self.window.after(60000, self.show_screensaver)
 
     def show_screensaver(self):
         self.screensaver_active = True
