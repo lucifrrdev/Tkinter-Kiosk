@@ -330,24 +330,33 @@ class KioskApp:
     def get_x1202_battery_percentage(self):
         try:
             import smbus2
-            import struct
-            # Baca data baterai dari chip MAX1704x di I2C address 0x36
-            with smbus2.SMBus(1) as bus:
-                address = 0x36
-                
-                # Baca register 4 (kapasitas/persentase)
-                read_cap = bus.read_word_data(address, 4)
-                swapped_cap = struct.unpack("<H", struct.pack(">H", read_cap))[0]
-                capacity = swapped_cap / 256.0
-                capacity = max(0.0, min(100.0, capacity))
-                
-                # Baca register 2 (voltase)
-                read_volt = bus.read_word_data(address, 2)
-                swapped_volt = struct.unpack("<H", struct.pack(">H", read_volt))[0]
-                voltage = swapped_volt * 1.25 / 1000.0 / 16.0
-                
-                return capacity, voltage
-        except Exception:
+            import time
+            bus = smbus2.SMBus(1)
+            address = 0x36
+
+            # Kirim QuickStart hanya sekali saat pertama kali dibaca
+            if not getattr(self, '_x1202_initialized', False):
+                # Register MODE (0x06), tulis 0x4000 = QuickStart command
+                bus.write_word_data(address, 0x06, 0x0040)
+                time.sleep(0.2)  # Tunggu chip reset dan kalkulasi ulang
+                self._x1202_initialized = True
+
+            # Baca register VCELL (0x02): voltase baterai
+            # Chip mengirim 2 byte big-endian: byte[0]=MSB, byte[1]=LSB
+            volt_data = bus.read_i2c_block_data(address, 0x02, 2)
+            raw_volt = (volt_data[0] << 4) | (volt_data[1] >> 4)
+            voltage = raw_volt * 1.25 / 1000.0
+
+            # Baca register SOC (0x04): state of charge (persen baterai)
+            # Chip mengirim 2 byte: byte[0]=bagian integer, byte[1]=bagian desimal/256
+            soc_data = bus.read_i2c_block_data(address, 0x04, 2)
+            capacity = soc_data[0] + soc_data[1] / 256.0
+            capacity = max(0.0, min(100.0, capacity))
+
+            bus.close()
+            return capacity, voltage
+        except Exception as e:
+            print(f"[X1202] Error baca baterai: {e}")
             return None, None
 
     def get_ip_address(self):
@@ -428,10 +437,10 @@ class KioskApp:
         try:
             if os.name == 'nt':
                 # Di Windows, buka cmd lalu jalankan btop jika ada
-                subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop"])
+                subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop -p 1"])
             else:
                 # Di Raspberry Pi/Linux, jalankan btop di dalam lxterminal
-                subprocess.Popen(["lxterminal", "-e", "btop"])
+                subprocess.Popen(["lxterminal", "-e", "btop -p 1"])
         except Exception as e:
             messagebox.showerror("Error BTOP", f"Gagal membuka BTOP: {e}")
 
