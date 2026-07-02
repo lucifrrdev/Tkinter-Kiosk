@@ -7,6 +7,8 @@ import socket
 import threading
 from datetime import datetime
 import psutil
+import random
+from PIL import Image, ImageTk
 
 # Deteksi Font Family berdasarkan OS
 FONT_FAMILY = "Segoe UI" if os.name == "nt" else "Helvetica"
@@ -141,14 +143,6 @@ class KioskApp:
             fg="#38bdf8"
         )
         self.lbl_clock.pack(side="right", padx=10, pady=5)
-
-        self.lbl_battery = tk.Label(
-            self.header,
-            font=(FONT_FAMILY, 9, "bold"),
-            bg="#1e293b",
-            fg="#10b981"
-        )
-        self.lbl_battery.pack(side="right", padx=5, pady=5)
         self.update_clock()
 
         # ------------------- CONTENT FRAME -------------------
@@ -216,13 +210,14 @@ class KioskApp:
         self.stats_bar.grid_columnconfigure(1, weight=1)
         self.stats_bar.grid_columnconfigure(2, weight=1)
         self.stats_bar.grid_columnconfigure(3, weight=1)
+        self.stats_bar.grid_columnconfigure(4, weight=1)
 
         # CPU Card
         self.cell_cpu = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
         self.cell_cpu.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
         self.lbl_cpu = tk.Label(self.cell_cpu, text="CPU: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
         self.lbl_cpu.pack(anchor="center", pady=(2, 0))
-        self.bar_cpu = FlatProgressBar(self.cell_cpu, width=80, height=3, bg_color="#1e293b", fill_color="#3b82f6")
+        self.bar_cpu = FlatProgressBar(self.cell_cpu, width=70, height=3, bg_color="#1e293b", fill_color="#3b82f6")
         self.bar_cpu.pack(anchor="center", pady=(1, 2))
 
         # RAM Card
@@ -230,7 +225,7 @@ class KioskApp:
         self.cell_ram.grid(row=0, column=1, padx=2, pady=2, sticky="nsew")
         self.lbl_ram = tk.Label(self.cell_ram, text="RAM: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
         self.lbl_ram.pack(anchor="center", pady=(2, 0))
-        self.bar_ram = FlatProgressBar(self.cell_ram, width=80, height=3, bg_color="#1e293b", fill_color="#a855f7")
+        self.bar_ram = FlatProgressBar(self.cell_ram, width=70, height=3, bg_color="#1e293b", fill_color="#a855f7")
         self.bar_ram.pack(anchor="center", pady=(1, 2))
 
         # Storage/Disk Card
@@ -238,7 +233,7 @@ class KioskApp:
         self.cell_disk.grid(row=0, column=2, padx=2, pady=2, sticky="nsew")
         self.lbl_disk = tk.Label(self.cell_disk, text="Disk: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
         self.lbl_disk.pack(anchor="center", pady=(2, 0))
-        self.bar_disk = FlatProgressBar(self.cell_disk, width=80, height=3, bg_color="#1e293b", fill_color="#eab308")
+        self.bar_disk = FlatProgressBar(self.cell_disk, width=70, height=3, bg_color="#1e293b", fill_color="#eab308")
         self.bar_disk.pack(anchor="center", pady=(1, 2))
 
         # Temperature Card
@@ -246,8 +241,19 @@ class KioskApp:
         self.cell_temp.grid(row=0, column=3, padx=2, pady=2, sticky="nsew")
         self.lbl_temp = tk.Label(self.cell_temp, text="Temp: N/A", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f43f5e")
         self.lbl_temp.pack(anchor="center", pady=(2, 0))
-        self.bar_temp = FlatProgressBar(self.cell_temp, width=80, height=3, bg_color="#1e293b", fill_color="#f43f5e")
+        self.bar_temp = FlatProgressBar(self.cell_temp, width=70, height=3, bg_color="#1e293b", fill_color="#f43f5e")
         self.bar_temp.pack(anchor="center", pady=(1, 2))
+
+        # Battery Card
+        self.cell_battery = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
+        self.cell_battery.grid(row=0, column=4, padx=2, pady=2, sticky="nsew")
+        self.lbl_battery = tk.Label(self.cell_battery, text="Bat: N/A", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#10b981")
+        self.lbl_battery.pack(anchor="center", pady=(2, 0))
+        self.bar_battery = FlatProgressBar(self.cell_battery, width=70, height=3, bg_color="#1e293b", fill_color="#10b981")
+        self.bar_battery.pack(anchor="center", pady=(1, 2))
+
+        # Trigger initial stats updates
+        self.update_stats()
 
         # ------------------- SCREENSAVER CONFIGURATIONS -------------------
         self.screensaver_active = False
@@ -302,13 +308,15 @@ class KioskApp:
             temp_pct = max(0, min(100, int((temp_c - 30) / 50.0 * 100))) if temp_c > 0 else 0
             self.bar_temp.set_value(temp_pct)
 
-            # Battery (In Header)
+            # Battery
             battery = psutil.sensors_battery()
             if battery:
                 plugged = "⚡" if battery.power_plugged else "🔋"
-                self.lbl_battery.configure(text=f"{plugged} {battery.percent}%")
+                self.lbl_battery.configure(text=f"Bat: {battery.percent}% {plugged}")
+                self.bar_battery.set_value(battery.percent)
             else:
-                self.lbl_battery.configure(text="🔌 AC")
+                self.lbl_battery.configure(text="Bat: AC 🔌")
+                self.bar_battery.set_value(100)
         except Exception as e:
             print(f"Error updating stats: {e}")
             
@@ -664,52 +672,22 @@ class KioskApp:
         self.ss_frame = tk.Frame(self.window, bg="#020617")
         self.ss_frame.place(x=0, y=0, relwidth=1.0, relheight=1.0)
         
-        # Canvas tempat merender jam melantun
-        self.ss_canvas = tk.Canvas(self.ss_frame, bg="#020617", highlightthickness=0)
-        self.ss_canvas.pack(fill="both", expand=True)
-        
-        # Teks Jam Utama
-        self.ss_time_text = self.ss_canvas.create_text(
-            150, 100, 
-            text="12:00:00", 
-            font=(FONT_FAMILY, 28, "bold"), 
-            fill="#38bdf8", 
-            anchor="center"
-        )
-        
-        # Teks Tanggal di bawah jam
-        self.ss_date_text = self.ss_canvas.create_text(
-            150, 135, 
-            text="Kamis, 02 Juli 2026", 
-            font=(FONT_FAMILY, 12), 
-            fill="#64748b", 
-            anchor="center"
-        )
-        
-        # Teks petunjuk sentuh layar
-        self.ss_hint_text = self.ss_canvas.create_text(
-            240, 295, 
-            text="Sentuh layar untuk kembali", 
-            font=(FONT_FAMILY, 9), 
-            fill="#334155", 
-            anchor="center"
-        )
-        
-        # Parameter gerak / bounce screensaver (kecepatan awal x, y)
-        self.ss_dx = 1.5
-        self.ss_dy = 1.5
+        # Label untuk menampilkan gambar
+        self.ss_image_label = tk.Label(self.ss_frame, bg="#020617")
+        self.ss_image_label.pack(fill="both", expand=True)
         
         # Deteksi mouse untuk mencegah dismiss langsung akibat jitter kecil
         self.ss_mouse_x = None
         self.ss_mouse_y = None
         
         # Bind event untuk keluar dari screensaver
-        self.ss_canvas.bind("<Button-1>", lambda e: self.hide_screensaver())
-        self.ss_canvas.bind("<Key>", lambda e: self.hide_screensaver())
-        self.ss_canvas.bind("<Motion>", self.on_screensaver_motion)
-        
-        # Mulai animasi gerak jam
-        self.animate_screensaver()
+        for widget in (self.ss_frame, self.ss_image_label):
+            widget.bind("<Button-1>", lambda e: self.hide_screensaver())
+            widget.bind("<Key>", lambda e: self.hide_screensaver())
+            widget.bind("<Motion>", self.on_screensaver_motion)
+            
+        # Tampilkan gambar pertama dan jalankan rotasi otomatis
+        self.rotate_screensaver_image()
 
     def on_screensaver_motion(self, event):
         # Mencegah jitter pointer langsung menutup screensaver
@@ -722,51 +700,37 @@ class KioskApp:
             if dx > 12 or dy > 12:  # Toleransi gerakan pointer 12px
                 self.hide_screensaver()
 
-    def animate_screensaver(self):
+    def rotate_screensaver_image(self):
         if not hasattr(self, "screensaver_active") or not self.screensaver_active:
             return
             
-        w = self.ss_canvas.winfo_width()
-        h = self.ss_canvas.winfo_height()
+        # Cari file .jpg di direktori aktif
+        jpg_files = [f for f in os.listdir('.') if f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')]
         
-        # Fallback ukuran default jika winfo belum siap merender resolusi aktual
-        if w < 10: w = 480
-        if h < 10: h = 320
-            
-        # Update teks jam & tanggal terbaru
-        now_t = datetime.now().strftime("%H:%M:%S")
-        now_d = datetime.now().strftime("%d-%m-%Y")
-        
-        self.ss_canvas.itemconfig(self.ss_time_text, text=now_t)
-        self.ss_canvas.itemconfig(self.ss_date_text, text=now_d)
-        
-        # Dapatkan batas-batas koordinat box teks gabungan jam + tanggal
-        bbox_t = self.ss_canvas.bbox(self.ss_time_text)
-        bbox_d = self.ss_canvas.bbox(self.ss_date_text)
-        
-        if bbox_t and bbox_d:
-            x1 = min(bbox_t[0], bbox_d[0])
-            y1 = min(bbox_t[1], bbox_d[1])
-            x2 = max(bbox_t[2], bbox_d[2])
-            y2 = max(bbox_t[3], bbox_d[3])
-            
-            # Deteksi tabrakan dengan batas layar (bouncing)
-            if x1 + self.ss_dx <= 10 or x2 + self.ss_dx >= w - 10:
-                self.ss_dx = -self.ss_dx
-            if y1 + self.ss_dy <= 10 or y2 + self.ss_dy >= h - 35:
-                self.ss_dy = -self.ss_dy
+        if jpg_files:
+            chosen_img = random.choice(jpg_files)
+            try:
+                # Dapatkan ukuran layar aktual
+                w = self.window.winfo_width()
+                h = self.window.winfo_height()
+                if w < 10: w = 480
+                if h < 10: h = 320
                 
-            # Gerakkan objek teks jam & tanggal
-            self.ss_canvas.move(self.ss_time_text, self.ss_dx, self.ss_dy)
-            self.ss_canvas.move(self.ss_date_text, self.ss_dx, self.ss_dy)
-            
-        # Ulangi animasi setiap 40 milidetik (~25 FPS)
-        self.ss_anim_job = self.window.after(40, self.animate_screensaver)
+                # Load dan resize gambar agar pas di layar
+                img = Image.open(chosen_img)
+                img = img.resize((w, h), Image.Resampling.LANCZOS)
+                self.ss_photo = ImageTk.PhotoImage(img)
+                self.ss_image_label.configure(image=self.ss_photo)
+            except Exception as e:
+                print(f"Error loading screensaver image: {e}")
+                
+        # Rotasi gambar berikutnya setiap 8 detik (8000 milidetik)
+        self.ss_anim_job = self.window.after(8000, self.rotate_screensaver_image)
 
     def hide_screensaver(self):
         self.screensaver_active = False
         
-        # Batalkan loop animasi jam
+        # Batalkan loop rotasi gambar
         if hasattr(self, "ss_anim_job") and self.ss_anim_job:
             self.window.after_cancel(self.ss_anim_job)
             
@@ -774,7 +738,7 @@ class KioskApp:
         if hasattr(self, "ss_frame") and self.ss_frame:
             self.ss_frame.destroy()
             
-        # Reset ulang timer idle 1 menit baru
+        # Reset ulang timer idle
         self.reset_screensaver_timer()
 
 # Menjalankan aplikasi
