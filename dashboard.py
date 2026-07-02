@@ -315,12 +315,40 @@ class KioskApp:
                 self.lbl_battery.configure(text=f"Bat: {battery.percent}% {plugged}")
                 self.bar_battery.set_value(battery.percent)
             else:
-                self.lbl_battery.configure(text="Bat: AC 🔌")
-                self.bar_battery.set_value(100)
+                capacity, voltage = self.get_x1202_battery_percentage()
+                if capacity is not None:
+                    self.lbl_battery.configure(text=f"Bat: {capacity:.1f}% ({voltage:.2f}V) 🔋")
+                    self.bar_battery.set_value(int(capacity))
+                else:
+                    self.lbl_battery.configure(text="Bat: AC 🔌")
+                    self.bar_battery.set_value(100)
         except Exception as e:
             print(f"Error updating stats: {e}")
             
         self.window.after(3000, self.update_stats)
+
+    def get_x1202_battery_percentage(self):
+        try:
+            import smbus2
+            import struct
+            # Baca data baterai dari chip MAX1704x di I2C address 0x36
+            with smbus2.SMBus(1) as bus:
+                address = 0x36
+                
+                # Baca register 4 (kapasitas/persentase)
+                read_cap = bus.read_word_data(address, 4)
+                swapped_cap = struct.unpack("<H", struct.pack(">H", read_cap))[0]
+                capacity = swapped_cap / 256.0
+                capacity = max(0.0, min(100.0, capacity))
+                
+                # Baca register 2 (voltase)
+                read_volt = bus.read_word_data(address, 2)
+                swapped_volt = struct.unpack("<H", struct.pack(">H", read_volt))[0]
+                voltage = swapped_volt * 1.25 / 1000.0 / 16.0
+                
+                return capacity, voltage
+        except Exception:
+            return None, None
 
     def get_ip_address(self):
         try:
