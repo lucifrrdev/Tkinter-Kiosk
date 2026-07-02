@@ -704,8 +704,11 @@ class KioskApp:
         if not hasattr(self, "screensaver_active") or not self.screensaver_active:
             return
             
-        # Cari file .jpg di direktori aktif
-        jpg_files = [f for f in os.listdir('.') if f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')]
+        # Dapatkan direktori tempat script ini berada
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Cari file .jpg di direktori script
+        jpg_files = [os.path.join(script_dir, f) for f in os.listdir(script_dir) if f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')]
         
         if jpg_files:
             chosen_img = random.choice(jpg_files)
