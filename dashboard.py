@@ -35,7 +35,7 @@ class FlatProgressBar(tk.Canvas):
 
 class CardButton(tk.Frame):
     def __init__(self, parent, icon, title, subtitle, bg_color, hover_color, command, **kwargs):
-        super().__init__(parent, bg=bg_color, cursor="hand2", **kwargs)
+        super().__init__(parent, bg=bg_color, cursor="hand2", highlightthickness=1, highlightbackground="#334155", **kwargs)
         self.bg_color = bg_color
         self.hover_color = hover_color
         self.command = command
@@ -47,14 +47,14 @@ class CardButton(tk.Frame):
         self.grid_rowconfigure(3, weight=0)
         self.grid_rowconfigure(4, weight=1)
         
-        self.lbl_icon = tk.Label(self, text=icon, font=(FONT_FAMILY, 20), bg=bg_color, fg="white")
-        self.lbl_icon.grid(row=1, column=0, pady=(10, 2))
+        self.lbl_icon = tk.Label(self, text=icon, font=(FONT_FAMILY, 22), bg=bg_color, fg="white")
+        self.lbl_icon.grid(row=1, column=0, pady=(8, 2))
         
-        self.lbl_title = tk.Label(self, text=title, font=(FONT_FAMILY, 10, "bold"), bg=bg_color, fg="white")
+        self.lbl_title = tk.Label(self, text=title, font=(FONT_FAMILY, 11, "bold"), bg=bg_color, fg="white")
         self.lbl_title.grid(row=2, column=0, pady=1)
         
         self.lbl_sub = tk.Label(self, text=subtitle, font=(FONT_FAMILY, 8), bg=bg_color, fg="#94a3b8")
-        self.lbl_sub.grid(row=3, column=0, pady=(0, 10))
+        self.lbl_sub.grid(row=3, column=0, pady=(0, 8))
         
         for widget in (self, self.lbl_icon, self.lbl_title, self.lbl_sub):
             widget.bind("<Enter>", self.on_enter)
@@ -78,13 +78,13 @@ class CardButton(tk.Frame):
             self.lbl_sub.configure(text=subtitle)
             
     def on_enter(self, event):
-        self.configure(bg=self.hover_color)
+        self.configure(bg=self.hover_color, highlightbackground=self.hover_color)
         self.lbl_icon.configure(bg=self.hover_color)
         self.lbl_title.configure(bg=self.hover_color)
         self.lbl_sub.configure(bg=self.hover_color)
         
     def on_leave(self, event):
-        self.configure(bg=self.bg_color)
+        self.configure(bg=self.bg_color, highlightbackground="#334155")
         self.lbl_icon.configure(bg=self.bg_color)
         self.lbl_title.configure(bg=self.bg_color)
         self.lbl_sub.configure(bg=self.bg_color)
@@ -111,123 +111,57 @@ class KioskApp:
         self.window.grid_columnconfigure(0, weight=1)
 
         # ------------------- HEADER FRAME -------------------
-        self.header = tk.Frame(window, bg="#1e293b", height=45)
+        self.header = tk.Frame(window, bg="#1e293b", height=30)
         self.header.grid(row=0, column=0, sticky="ew")
         self.header.grid_propagate(False)
 
         self.lbl_title = tk.Label(
             self.header, 
-            text="⚙️ KIOSK CONTROLLER", 
-            font=(FONT_FAMILY, 12, "bold"), 
+            text="⚙️ KIOSK", 
+            font=(FONT_FAMILY, 10, "bold"), 
             bg="#1e293b", 
             fg="#f8fafc"
         )
-        self.lbl_title.pack(side="left", padx=15, pady=10)
+        self.lbl_title.pack(side="left", padx=10, pady=5)
 
-        self.btn_exit = tk.Button(
+        self.ip_address = self.get_ip_address()
+        self.lbl_ip = tk.Label(
             self.header,
-            text="✕",
-            font=(FONT_FAMILY, 11, "bold"),
-            bg="#ef4444",
-            fg="white",
-            activebackground="#dc2626",
-            activeforeground="white",
-            relief="flat",
-            bd=0,
-            cursor="hand2",
-            padx=12,
-            command=self.exit_app
-        )
-        self.btn_exit.pack(side="right", padx=15, pady=8)
-        self.btn_exit.bind("<Enter>", lambda e: self.btn_exit.configure(bg="#dc2626"))
-        self.btn_exit.bind("<Leave>", lambda e: self.btn_exit.configure(bg="#ef4444"))
-
-        self.lbl_clock = tk.Label(
-            self.header,
-            font=(FONT_FAMILY, 11, "bold"),
-            bg="#1e293b",
-            fg="#38bdf8"
-        )
-        self.lbl_clock.pack(side="right", padx=10, pady=10)
-        self.update_clock()
-
-        # ------------------- CONTENT FRAME -------------------
-        self.content = tk.Frame(window, bg="#0f172a")
-        self.content.grid(row=1, column=0, sticky="nsew", padx=12, pady=8)
-        self.content.grid_rowconfigure(0, weight=1)
-        self.content.grid_columnconfigure(0, weight=1)
-        self.content.grid_columnconfigure(1, weight=3)
-
-        # ------------------- LEFT PANEL: SYSTEM STATS -------------------
-        self.left_panel = tk.Frame(self.content, bg="#1e293b", bd=0)
-        self.left_panel.grid(row=0, column=0, padx=4, pady=4, sticky="nsew")
-        self.left_panel.grid_columnconfigure(0, weight=1)
-        
-        self.lbl_stats_title = tk.Label(
-            self.left_panel,
-            text="📊 STATISTIK SISTEM",
+            text=f"IP: {self.ip_address}",
             font=(FONT_FAMILY, 9, "bold"),
             bg="#1e293b",
             fg="#94a3b8"
         )
-        self.lbl_stats_title.pack(anchor="w", padx=10, pady=(10, 4))
+        self.lbl_ip.pack(side="left", padx=15, pady=5)
 
-        divider = tk.Frame(self.left_panel, bg="#334155", height=1)
-        divider.pack(fill="x", padx=10, pady=(0, 6))
+        self.lbl_clock = tk.Label(
+            self.header,
+            font=(FONT_FAMILY, 9, "bold"),
+            bg="#1e293b",
+            fg="#38bdf8"
+        )
+        self.lbl_clock.pack(side="right", padx=10, pady=5)
 
-        self.stats_container = tk.Frame(self.left_panel, bg="#1e293b")
-        self.stats_container.pack(fill="both", expand=True, padx=10, pady=0)
+        self.lbl_battery = tk.Label(
+            self.header,
+            font=(FONT_FAMILY, 9, "bold"),
+            bg="#1e293b",
+            fg="#10b981"
+        )
+        self.lbl_battery.pack(side="right", padx=5, pady=5)
+        self.update_clock()
 
-        # CPU Row
-        self.frame_cpu = tk.Frame(self.stats_container, bg="#1e293b")
-        self.frame_cpu.pack(fill="x", pady=1)
-        self.lbl_cpu = tk.Label(self.frame_cpu, text="CPU: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#1e293b", fg="#f1f5f9")
-        self.lbl_cpu.pack(anchor="w")
-        self.bar_cpu = FlatProgressBar(self.frame_cpu, width=105, height=5, fill_color="#3b82f6")
-        self.bar_cpu.pack(anchor="w", pady=(1, 2))
-
-        # RAM Row
-        self.frame_ram = tk.Frame(self.stats_container, bg="#1e293b")
-        self.frame_ram.pack(fill="x", pady=1)
-        self.lbl_ram = tk.Label(self.frame_ram, text="RAM: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#1e293b", fg="#f1f5f9")
-        self.lbl_ram.pack(anchor="w")
-        self.bar_ram = FlatProgressBar(self.frame_ram, width=105, height=5, fill_color="#a855f7")
-        self.bar_ram.pack(anchor="w", pady=(1, 2))
-
-        # Storage Row
-        self.frame_disk = tk.Frame(self.stats_container, bg="#1e293b")
-        self.frame_disk.pack(fill="x", pady=1)
-        self.lbl_disk = tk.Label(self.frame_disk, text="Disk: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#1e293b", fg="#f1f5f9")
-        self.lbl_disk.pack(anchor="w")
-        self.bar_disk = FlatProgressBar(self.frame_disk, width=105, height=5, fill_color="#eab308")
-        self.bar_disk.pack(anchor="w", pady=(1, 2))
-
-        # Temp & Battery Row
-        self.frame_other = tk.Frame(self.stats_container, bg="#1e293b")
-        self.frame_other.pack(fill="x", pady=(3, 0))
-        
-        self.lbl_temp = tk.Label(self.frame_other, text="🌡️ Suhu: N/A", font=(FONT_FAMILY, 8, "bold"), bg="#1e293b", fg="#f43f5e")
-        self.lbl_temp.pack(anchor="w", pady=1)
-
-        self.lbl_battery = tk.Label(self.frame_other, text="🔋 Baterai: N/A", font=(FONT_FAMILY, 8, "bold"), bg="#1e293b", fg="#10b981")
-        self.lbl_battery.pack(anchor="w", pady=1)
-        self.bar_battery = FlatProgressBar(self.frame_other, width=105, height=5, fill_color="#10b981")
-        self.bar_battery.pack(anchor="w", pady=(1, 2))
-
-        self.update_stats()
-
-        # ------------------- RIGHT PANEL: ACTIONS -------------------
-        self.right_panel = tk.Frame(self.content, bg="#0f172a")
-        self.right_panel.grid(row=0, column=1, padx=4, pady=4, sticky="nsew")
-        
-        self.right_panel.grid_rowconfigure(0, weight=1)
-        self.right_panel.grid_rowconfigure(1, weight=1)
-        self.right_panel.grid_columnconfigure(0, weight=1)
-        self.right_panel.grid_columnconfigure(1, weight=1)
+        # ------------------- CONTENT FRAME -------------------
+        self.content = tk.Frame(window, bg="#0f172a")
+        self.content.grid(row=1, column=0, sticky="nsew", padx=6, pady=4)
+        self.content.grid_rowconfigure(0, weight=1)
+        self.content.grid_rowconfigure(1, weight=1)
+        self.content.grid_columnconfigure(0, weight=1)
+        self.content.grid_columnconfigure(1, weight=1)
 
         # CardButton 1: Terminal
         self.btn_terminal = CardButton(
-            self.right_panel, 
+            self.content, 
             icon="💻", 
             title="TERMINAL", 
             subtitle="Buka Bash CLI",
@@ -235,11 +169,11 @@ class KioskApp:
             hover_color="#0369a1",
             command=self.buka_terminal
         )
-        self.btn_terminal.grid(row=0, column=0, padx=6, pady=6, sticky="nsew")
+        self.btn_terminal.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
         # CardButton 2: Wi-Fi Setup
         self.btn_wifi = CardButton(
-            self.right_panel, 
+            self.content, 
             icon="📶", 
             title="WIFI SETUP", 
             subtitle="Jaringan Jarak Jauh",
@@ -247,11 +181,11 @@ class KioskApp:
             hover_color="#5b21b6",
             command=self.show_wifi_dialog
         )
-        self.btn_wifi.grid(row=0, column=1, padx=6, pady=6, sticky="nsew")
+        self.btn_wifi.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
 
         # CardButton 3: SSH Control
         self.btn_ssh = CardButton(
-            self.right_panel, 
+            self.content, 
             icon="🔑", 
             title="SSH SYSTEM", 
             subtitle="Memeriksa...",
@@ -259,12 +193,12 @@ class KioskApp:
             hover_color="#334155",
             command=self.confirm_toggle_ssh
         )
-        self.btn_ssh.grid(row=1, column=0, padx=6, pady=6, sticky="nsew")
+        self.btn_ssh.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.update_ssh_button_loop()
 
         # CardButton 4: System Control
         self.btn_system = CardButton(
-            self.right_panel, 
+            self.content, 
             icon="⚙️", 
             title="SYSTEM DAYA", 
             subtitle="Reboot/Shutdown",
@@ -272,23 +206,48 @@ class KioskApp:
             hover_color="#b45309",
             command=self.show_system_dialog
         )
-        self.btn_system.grid(row=1, column=1, padx=6, pady=6, sticky="nsew")
+        self.btn_system.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
-        # ------------------- FOOTER FRAME -------------------
-        self.footer = tk.Frame(window, bg="#1e293b", height=25)
-        self.footer.grid(row=2, column=0, sticky="ew")
-        self.footer.grid_propagate(False)
+        # ------------------- BOTTOM STATS BAR -------------------
+        self.stats_bar = tk.Frame(window, bg="#1e293b", height=42)
+        self.stats_bar.grid(row=2, column=0, sticky="ew")
+        self.stats_bar.grid_propagate(False)
+        self.stats_bar.grid_columnconfigure(0, weight=1)
+        self.stats_bar.grid_columnconfigure(1, weight=1)
+        self.stats_bar.grid_columnconfigure(2, weight=1)
+        self.stats_bar.grid_columnconfigure(3, weight=1)
 
-        # Info IP Address
-        self.ip_address = self.get_ip_address()
-        self.lbl_ip = tk.Label(
-            self.footer, 
-            text=f"IP Address: {self.ip_address}  |  Tekan 'q' atau klik '✕' untuk Keluar Kiosk", 
-            font=(FONT_FAMILY, 8, "bold"), 
-            bg="#1e293b", 
-            fg="#94a3b8"
-        )
-        self.lbl_ip.pack(side="left", padx=15, pady=3)
+        # CPU Card
+        self.cell_cpu = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
+        self.cell_cpu.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
+        self.lbl_cpu = tk.Label(self.cell_cpu, text="CPU: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
+        self.lbl_cpu.pack(anchor="center", pady=(2, 0))
+        self.bar_cpu = FlatProgressBar(self.cell_cpu, width=80, height=3, bg_color="#1e293b", fill_color="#3b82f6")
+        self.bar_cpu.pack(anchor="center", pady=(1, 2))
+
+        # RAM Card
+        self.cell_ram = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
+        self.cell_ram.grid(row=0, column=1, padx=2, pady=2, sticky="nsew")
+        self.lbl_ram = tk.Label(self.cell_ram, text="RAM: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
+        self.lbl_ram.pack(anchor="center", pady=(2, 0))
+        self.bar_ram = FlatProgressBar(self.cell_ram, width=80, height=3, bg_color="#1e293b", fill_color="#a855f7")
+        self.bar_ram.pack(anchor="center", pady=(1, 2))
+
+        # Storage/Disk Card
+        self.cell_disk = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
+        self.cell_disk.grid(row=0, column=2, padx=2, pady=2, sticky="nsew")
+        self.lbl_disk = tk.Label(self.cell_disk, text="Disk: 0%", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f1f5f9")
+        self.lbl_disk.pack(anchor="center", pady=(2, 0))
+        self.bar_disk = FlatProgressBar(self.cell_disk, width=80, height=3, bg_color="#1e293b", fill_color="#eab308")
+        self.bar_disk.pack(anchor="center", pady=(1, 2))
+
+        # Temperature Card
+        self.cell_temp = tk.Frame(self.stats_bar, bg="#0f172a", highlightthickness=1, highlightbackground="#334155")
+        self.cell_temp.grid(row=0, column=3, padx=2, pady=2, sticky="nsew")
+        self.lbl_temp = tk.Label(self.cell_temp, text="Temp: N/A", font=(FONT_FAMILY, 8, "bold"), bg="#0f172a", fg="#f43f5e")
+        self.lbl_temp.pack(anchor="center", pady=(2, 0))
+        self.bar_temp = FlatProgressBar(self.cell_temp, width=80, height=3, bg_color="#1e293b", fill_color="#f43f5e")
+        self.bar_temp.pack(anchor="center", pady=(1, 2))
 
         # ------------------- SCREENSAVER CONFIGURATIONS -------------------
         self.screensaver_active = False
@@ -326,25 +285,30 @@ class KioskApp:
             self.bar_disk.set_value(disk.percent)
 
             # Temperature
-            temp_str = "🌡️ Suhu: N/A"
+            temp_c = 0
+            temp_str = "Temp: N/A"
             if os.name != 'nt':
                 try:
                     with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
                         temp_c = int(f.read()) / 1000.0
-                        temp_str = f"🌡️ Suhu: {temp_c:.1f} °C"
+                        temp_str = f"Temp: {temp_c:.1f}°C"
                 except Exception:
                     pass
+            else:
+                temp_c = 38.5
+                temp_str = f"Temp: {temp_c:.1f}°C"
             self.lbl_temp.configure(text=temp_str)
+            
+            temp_pct = max(0, min(100, int((temp_c - 30) / 50.0 * 100))) if temp_c > 0 else 0
+            self.bar_temp.set_value(temp_pct)
 
-            # Battery
+            # Battery (In Header)
             battery = psutil.sensors_battery()
             if battery:
-                plugged = "Dicas" if battery.power_plugged else "Baterai"
-                self.lbl_battery.configure(text=f"🔋 Baterai: {battery.percent}% ({plugged})")
-                self.bar_battery.set_value(battery.percent)
+                plugged = "⚡" if battery.power_plugged else "🔋"
+                self.lbl_battery.configure(text=f"{plugged} {battery.percent}%")
             else:
-                self.lbl_battery.configure(text="🔋 Baterai: AC Power")
-                self.bar_battery.set_value(100)
+                self.lbl_battery.configure(text="🔌 AC")
         except Exception as e:
             print(f"Error updating stats: {e}")
             
@@ -672,7 +636,7 @@ class KioskApp:
             self.btn_connect.configure(text="Hubungkan", state="normal", bg="#10b981")
             if success:
                 self.ip_address = self.get_ip_address()
-                self.lbl_ip.configure(text=f"IP Address: {self.ip_address}  |  Tekan 'q' atau klik '✕' untuk Keluar Kiosk")
+                self.lbl_ip.configure(text=f"IP: {self.ip_address}")
                 messagebox.showinfo("Sukses WiFi", f"Berhasil terhubung ke Wi-Fi: {ssid}!")
                 self.wifi_dialog.destroy()
             else:
