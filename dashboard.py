@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import os
+import sys
 import subprocess
 import socket
 import threading
@@ -100,8 +101,17 @@ class KioskApp:
         self.window = window
         self.window.title("Kiosk Controller")
         
-        # Fullscreen
-        self.window.attributes('-fullscreen', True)
+        # Setup screen geometry and fullscreen based on command line arguments
+        if "--screen 2" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "--screen"):
+            # Posisi monitor kedua dimulai dari koordinat X=1920 (lebar monitor pertama)
+            # Menampilkan fullscreen di monitor kedua
+            self.window.geometry("480x320+1920+0") 
+            self.window.attributes('-fullscreen', True)
+        else:
+            # Jika mode single monitor (Hanya LCD 3.5 inci)
+            self.window.geometry("480x320+0+0")
+            self.window.attributes('-fullscreen', True)
+            
         self.window.configure(bg="#0f172a") # Dark Slate 900
 
         self.window.bind('<q>', lambda e: self.exit_app())
