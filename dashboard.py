@@ -470,9 +470,20 @@ class KioskApp:
 
         self.wifi_dialog = tk.Toplevel(self.window)
         self.wifi_dialog.title("Setup Jaringan Wi-Fi")
-        self.wifi_dialog.geometry("380x250")
         self.wifi_dialog.configure(bg="#0f172a")
         self.wifi_dialog.resizable(False, False)
+        
+        # Center the dialog on screen
+        width = 380
+        height = 250
+        self.window.update_idletasks()
+        parent_x = self.window.winfo_x()
+        parent_y = self.window.winfo_y()
+        parent_w = self.window.winfo_width()
+        parent_h = self.window.winfo_height()
+        x = parent_x + (parent_w - width) // 2
+        y = parent_y + (parent_h - height) // 2
+        self.wifi_dialog.geometry(f"{width}x{height}+{x}+{y}")
         
         self.wifi_dialog.transient(self.window)
         self.wifi_dialog.grab_set()
@@ -736,6 +747,13 @@ class KioskApp:
 # Menjalankan aplikasi
 if __name__ == "__main__":
     root = tk.Tk()
+    
+    # Fix dropdown/listbox styling issue on Linux (blank/white text on white background)
+    root.option_add('*TCombobox*Listbox.background', '#1e293b')
+    root.option_add('*TCombobox*Listbox.foreground', 'white')
+    root.option_add('*TCombobox*Listbox.selectBackground', '#38bdf8')
+    root.option_add('*TCombobox*Listbox.selectForeground', '#0f172a')
+    root.option_add('*TCombobox*Listbox.font', (FONT_FAMILY, 9))
     
     style = ttk.Style()
     style.theme_use('default')
