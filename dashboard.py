@@ -373,12 +373,28 @@ class KioskApp:
         if messagebox.askokcancel("Keluar Kiosk", "Apakah Anda yakin ingin menutup aplikasi Kiosk?"):
             self.window.destroy()
 
+    def _get_linux_terminal(self):
+        import shutil
+        for term in ["x-terminal-emulator", "lxterminal", "xterm", "xfce4-terminal", "gnome-terminal", "konsole"]:
+            if shutil.which(term):
+                return term
+        return None
+
     def buka_terminal(self):
         try:
             if os.name == 'nt':
                 subprocess.Popen(["cmd.exe"])
             else:
-                subprocess.Popen(["lxterminal"])
+                term = self._get_linux_terminal()
+                if term:
+                    subprocess.Popen([term])
+                else:
+                    messagebox.showerror(
+                        "Terminal Tidak Ditemukan", 
+                        "Tidak ada terminal emulator (lxterminal, xterm, dll) yang terinstall di sistem.\n\n"
+                        "Silakan install via SSH dengan menjalankan:\n"
+                        "sudo apt update && sudo apt install -y lxterminal"
+                    )
         except Exception as e:
             messagebox.showerror("Error CLI", f"Gagal membuka terminal: {e}")
 
@@ -432,15 +448,25 @@ class KioskApp:
         except Exception as e:
             messagebox.showerror("Error SSH", f"Gagal mengontrol SSH: {e}")
 
-    # ------------------- BTOP MONITOR -------------------
     def buka_btop(self):
         try:
             if os.name == 'nt':
                 # Di Windows, buka cmd lalu jalankan btop jika ada
                 subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop -p 1"])
             else:
-                # Di Raspberry Pi/Linux, jalankan btop di dalam lxterminal
-                subprocess.Popen(["lxterminal", "-e", "btop -p 1"])
+                term = self._get_linux_terminal()
+                if term:
+                    if term == "gnome-terminal":
+                        subprocess.Popen([term, "--", "btop", "-p", "1"])
+                    else:
+                        subprocess.Popen([term, "-e", "btop -p 1"])
+                else:
+                    messagebox.showerror(
+                        "Terminal Tidak Ditemukan", 
+                        "Tidak ada terminal emulator untuk menjalankan btop.\n\n"
+                        "Silakan install via SSH dengan menjalankan:\n"
+                        "sudo apt update && sudo apt install -y lxterminal"
+                    )
         except Exception as e:
             messagebox.showerror("Error BTOP", f"Gagal membuka BTOP: {e}")
 
