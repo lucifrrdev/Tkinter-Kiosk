@@ -163,15 +163,15 @@ class KioskApp:
         self.content.grid_columnconfigure(0, weight=1)
         self.content.grid_columnconfigure(1, weight=1)
 
-        # CardButton 1: Terminal
+        # CardButton 1: TTY1
         self.btn_terminal = CardButton(
             self.content, 
             icon="💻", 
-            title="TERMINAL", 
-            subtitle="Buka Bash CLI",
+            title="TTY1", 
+            subtitle="CLI Murni",
             bg_color="#0284c7",
             hover_color="#0369a1",
-            command=self.buka_terminal
+            command=self.switch_to_tty1
         )
         self.btn_terminal.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
@@ -200,15 +200,15 @@ class KioskApp:
         self.btn_ssh.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.update_ssh_button_loop()
 
-        # CardButton 4: BTOP Monitor
+        # CardButton 4: TTY2 (BTOP)
         self.btn_btop = CardButton(
             self.content, 
             icon="📊", 
-            title="BTOP MONITOR", 
-            subtitle="Visual Monitor",
+            title="TTY2", 
+            subtitle="BTOP Monitor",
             bg_color="#d97706",
             hover_color="#b45309",
-            command=self.buka_btop
+            command=self.switch_to_tty2
         )
         self.btn_btop.grid(row=1, column=1, padx=5, pady=5, sticky="nsew")
 
@@ -390,23 +390,16 @@ class KioskApp:
                 return term
         return None
 
-    def buka_terminal(self):
+    def switch_to_tty1(self):
         try:
             if os.name == 'nt':
+                # Windows fallback: buka cmd
                 subprocess.Popen(["cmd.exe"])
             else:
-                term = self._get_linux_terminal()
-                if term:
-                    subprocess.Popen([term])
-                else:
-                    messagebox.showerror(
-                        "Terminal Tidak Ditemukan", 
-                        "Tidak ada terminal emulator (lxterminal, xterm, dll) yang terinstall di sistem.\n\n"
-                        "Silakan install via SSH dengan menjalankan:\n"
-                        "sudo apt update && sudo apt install -y lxterminal"
-                    )
+                # Pindah ke TTY1 (CLI murni) di Linux
+                subprocess.Popen(["sudo", "chvt", "1"])
         except Exception as e:
-            messagebox.showerror("Error CLI", f"Gagal membuka terminal: {e}")
+            messagebox.showerror("Error TTY1", f"Gagal pindah ke TTY1: {e}")
 
     # ------------------- SSH MANAGEMENT -------------------
     def get_ssh_status(self):
@@ -458,27 +451,16 @@ class KioskApp:
         except Exception as e:
             messagebox.showerror("Error SSH", f"Gagal mengontrol SSH: {e}")
 
-    def buka_btop(self):
+    def switch_to_tty2(self):
         try:
             if os.name == 'nt':
-                # Di Windows, buka cmd lalu jalankan btop jika ada
+                # Windows fallback: buka cmd running btop if possible
                 subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop -p 1"])
             else:
-                term = self._get_linux_terminal()
-                if term:
-                    if term == "gnome-terminal":
-                        subprocess.Popen([term, "--", "btop", "-p", "1"])
-                    else:
-                        subprocess.Popen([term, "-e", "btop -p 1"])
-                else:
-                    messagebox.showerror(
-                        "Terminal Tidak Ditemukan", 
-                        "Tidak ada terminal emulator untuk menjalankan btop.\n\n"
-                        "Silakan install via SSH dengan menjalankan:\n"
-                        "sudo apt update && sudo apt install -y lxterminal"
-                    )
+                # Pindah ke TTY2 (BTOP CLI) di Linux
+                subprocess.Popen(["sudo", "chvt", "2"])
         except Exception as e:
-            messagebox.showerror("Error BTOP", f"Gagal membuka BTOP: {e}")
+            messagebox.showerror("Error TTY2", f"Gagal pindah ke TTY2: {e}")
 
     # ------------------- WI-FI CONNECTION DIALOG -------------------
     def close_wifi_dialog(self):
@@ -493,6 +475,9 @@ class KioskApp:
         if hasattr(self, "ss_timer_job") and self.ss_timer_job:
             self.window.after_cancel(self.ss_timer_job)
             self.ss_timer_job = None
+        if hasattr(self, "ss_blank_job") and self.ss_blank_job:
+            self.window.after_cancel(self.ss_blank_job)
+            self.ss_blank_job = None
 
         self.wifi_dialog = tk.Toplevel(self.window)
         self.wifi_dialog.title("Setup Jaringan Wi-Fi")
@@ -687,33 +672,68 @@ class KioskApp:
         # Batalkan job timer screensaver sebelumnya jika ada
         if hasattr(self, "ss_timer_job") and self.ss_timer_job:
             self.window.after_cancel(self.ss_timer_job)
+            self.ss_timer_job = None
+            
+        if hasattr(self, "ss_blank_job") and self.ss_blank_job:
+            self.window.after_cancel(self.ss_blank_job)
+            self.ss_blank_job = None
             
         # Jadwalkan kemunculan screensaver setelah 60 detik (60000 milidetik) idle
         self.ss_timer_job = self.window.after(60000, self.show_screensaver)
+        # Jadwalkan kemunculan layar blank hitam setelah 5 menit (300000 milidetik) idle
+        self.ss_blank_job = self.window.after(300000, self.show_blank_screensaver)
 
     def show_screensaver(self):
         self.screensaver_active = True
         
-        # Buat overlay Frame hitam penuh
-        self.ss_frame = tk.Frame(self.window, bg="#020617")
-        self.ss_frame.place(x=0, y=0, relwidth=1.0, relheight=1.0)
-        
-        # Label untuk menampilkan gambar
-        self.ss_image_label = tk.Label(self.ss_frame, bg="#020617")
-        self.ss_image_label.pack(fill="both", expand=True)
-        
-        # Deteksi mouse untuk mencegah dismiss langsung akibat jitter kecil
-        self.ss_mouse_x = None
-        self.ss_mouse_y = None
-        
-        # Bind event untuk keluar dari screensaver
-        for widget in (self.ss_frame, self.ss_image_label):
-            widget.bind("<Button-1>", lambda e: self.hide_screensaver())
-            widget.bind("<Key>", lambda e: self.hide_screensaver())
-            widget.bind("<Motion>", self.on_screensaver_motion)
+        # Buat overlay Frame hitam penuh jika belum ada
+        if not hasattr(self, "ss_frame") or not self.ss_frame or not self.ss_frame.winfo_exists():
+            self.ss_frame = tk.Frame(self.window, bg="#020617")
+            self.ss_frame.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+            
+            # Label untuk menampilkan gambar
+            self.ss_image_label = tk.Label(self.ss_frame, bg="#020617")
+            self.ss_image_label.pack(fill="both", expand=True)
+            
+            # Deteksi mouse untuk mencegah dismiss langsung akibat jitter kecil
+            self.ss_mouse_x = None
+            self.ss_mouse_y = None
+            
+            # Bind event untuk keluar dari screensaver
+            for widget in (self.ss_frame, self.ss_image_label):
+                widget.bind("<Button-1>", lambda e: self.hide_screensaver())
+                widget.bind("<Key>", lambda e: self.hide_screensaver())
+                widget.bind("<Motion>", self.on_screensaver_motion)
             
         # Tampilkan gambar pertama dan jalankan rotasi otomatis
         self.rotate_screensaver_image()
+
+    def show_blank_screensaver(self):
+        self.screensaver_active = True
+        
+        # Hentikan rotasi gambar
+        if hasattr(self, "ss_anim_job") and self.ss_anim_job:
+            self.window.after_cancel(self.ss_anim_job)
+            self.ss_anim_job = None
+            
+        # Buat/ubah overlay Frame menjadi hitam penuh tanpa gambar
+        if not hasattr(self, "ss_frame") or not self.ss_frame or not self.ss_frame.winfo_exists():
+            self.ss_frame = tk.Frame(self.window, bg="#000000")
+            self.ss_frame.place(x=0, y=0, relwidth=1.0, relheight=1.0)
+            
+            self.ss_image_label = tk.Label(self.ss_frame, bg="#000000")
+            self.ss_image_label.pack(fill="both", expand=True)
+            
+            self.ss_mouse_x = None
+            self.ss_mouse_y = None
+            
+            for widget in (self.ss_frame, self.ss_image_label):
+                widget.bind("<Button-1>", lambda e: self.hide_screensaver())
+                widget.bind("<Key>", lambda e: self.hide_screensaver())
+                widget.bind("<Motion>", self.on_screensaver_motion)
+        else:
+            self.ss_frame.configure(bg="#000000")
+            self.ss_image_label.configure(image="", bg="#000000")
 
     def on_screensaver_motion(self, event):
         # Mencegah jitter pointer langsung menutup screensaver
@@ -762,10 +782,24 @@ class KioskApp:
         # Batalkan loop rotasi gambar
         if hasattr(self, "ss_anim_job") and self.ss_anim_job:
             self.window.after_cancel(self.ss_anim_job)
+            self.ss_anim_job = None
+            
+        # Batalkan job timer screensaver lainnya jika ada
+        if hasattr(self, "ss_timer_job") and self.ss_timer_job:
+            self.window.after_cancel(self.ss_timer_job)
+            self.ss_timer_job = None
+            
+        if hasattr(self, "ss_blank_job") and self.ss_blank_job:
+            self.window.after_cancel(self.ss_blank_job)
+            self.ss_blank_job = None
             
         # Tutup frame overlay screensaver
         if hasattr(self, "ss_frame") and self.ss_frame:
-            self.ss_frame.destroy()
+            try:
+                self.ss_frame.destroy()
+            except Exception:
+                pass
+            self.ss_frame = None
             
         # Reset ulang timer idle
         self.reset_screensaver_timer()
