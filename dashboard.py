@@ -471,21 +471,31 @@ class KioskApp:
                 # Windows fallback: buka cmd running btop if possible
                 subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop -p 1"])
             else:
+                import shutil
+                if not shutil.which("btop"):
+                    messagebox.showerror(
+                        "BTOP Tidak Ditemukan",
+                        "Aplikasi btop belum terinstall di sistem Anda.\n\n"
+                        "Silakan install via SSH dengan menjalankan:\n"
+                        "sudo apt update && sudo apt install -y btop"
+                    )
+                    return
+
                 # Buka BTOP monitor secara fullscreen menggunakan terminal emulator
                 term = self._get_linux_terminal()
                 if term:
                     if term == "lxterminal":
-                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop -p 1"])
                     elif term == "xterm":
-                        subprocess.Popen([term, "-fullscreen", "-e", "btop"])
+                        subprocess.Popen([term, "-fullscreen", "-e", "btop -p 1"])
                     elif term == "xfce4-terminal":
-                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop -p 1"])
                     elif term == "gnome-terminal":
-                        subprocess.Popen([term, "--fullscreen", "--", "btop"])
+                        subprocess.Popen([term, "--fullscreen", "--", "btop", "-p", "1"])
                     elif term == "konsole":
-                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop -p 1"])
                     else:
-                        subprocess.Popen([term, "-e", "btop"])
+                        subprocess.Popen([term, "-e", "btop -p 1"])
                 else:
                     messagebox.showerror(
                         "Terminal Tidak Ditemukan", 
