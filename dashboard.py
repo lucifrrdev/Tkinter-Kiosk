@@ -396,10 +396,24 @@ class KioskApp:
                 # Windows fallback: buka cmd
                 subprocess.Popen(["cmd.exe"])
             else:
-                # Pindah ke TTY1 (CLI murni) di Linux
-                subprocess.Popen(["sudo", "chvt", "1"])
+                # Buka terminal emulator dalam mode fullscreen (seperti CLI murni TTY)
+                term = self._get_linux_terminal()
+                if term:
+                    if term in ["lxterminal", "xfce4-terminal", "konsole"]:
+                        subprocess.Popen([term, "--fullscreen"])
+                    elif term == "gnome-terminal":
+                        subprocess.Popen([term, "--fullscreen"])
+                    elif term == "xterm":
+                        subprocess.Popen([term, "-fullscreen"])
+                    else:
+                        subprocess.Popen([term])
+                else:
+                    messagebox.showerror(
+                        "Terminal Tidak Ditemukan", 
+                        "Tidak ada terminal emulator (lxterminal, xterm, dll) yang terinstall di sistem."
+                    )
         except Exception as e:
-            messagebox.showerror("Error TTY1", f"Gagal pindah ke TTY1: {e}")
+            messagebox.showerror("Error TTY1", f"Gagal membuka terminal: {e}")
 
     # ------------------- SSH MANAGEMENT -------------------
     def get_ssh_status(self):
@@ -457,10 +471,28 @@ class KioskApp:
                 # Windows fallback: buka cmd running btop if possible
                 subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "btop -p 1"])
             else:
-                # Pindah ke TTY2 (BTOP CLI) di Linux
-                subprocess.Popen(["sudo", "chvt", "2"])
+                # Buka BTOP monitor secara fullscreen menggunakan terminal emulator
+                term = self._get_linux_terminal()
+                if term:
+                    if term == "lxterminal":
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                    elif term == "xterm":
+                        subprocess.Popen([term, "-fullscreen", "-e", "btop"])
+                    elif term == "xfce4-terminal":
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                    elif term == "gnome-terminal":
+                        subprocess.Popen([term, "--fullscreen", "--", "btop"])
+                    elif term == "konsole":
+                        subprocess.Popen([term, "--fullscreen", "-e", "btop"])
+                    else:
+                        subprocess.Popen([term, "-e", "btop"])
+                else:
+                    messagebox.showerror(
+                        "Terminal Tidak Ditemukan", 
+                        "Tidak ada terminal emulator untuk menjalankan btop."
+                    )
         except Exception as e:
-            messagebox.showerror("Error TTY2", f"Gagal pindah ke TTY2: {e}")
+            messagebox.showerror("Error TTY2", f"Gagal membuka BTOP: {e}")
 
     # ------------------- WI-FI CONNECTION DIALOG -------------------
     def close_wifi_dialog(self):
