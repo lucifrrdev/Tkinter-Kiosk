@@ -146,6 +146,24 @@ class KioskApp:
         )
         self.lbl_ip.pack(side="left", padx=15, pady=5)
 
+        self.lbl_firewall = tk.Label(
+            self.header,
+            text="🧱 FW: ...",
+            font=(FONT_FAMILY, 9, "bold"),
+            bg="#1e293b",
+            fg="#94a3b8"
+        )
+        self.lbl_firewall.pack(side="left", padx=15, pady=5)
+
+        self.lbl_dnsmasq = tk.Label(
+            self.header,
+            text="🌐 DNS: ...",
+            font=(FONT_FAMILY, 9, "bold"),
+            bg="#1e293b",
+            fg="#94a3b8"
+        )
+        self.lbl_dnsmasq.pack(side="left", padx=15, pady=5)
+
         self.lbl_clock = tk.Label(
             self.header,
             font=(FONT_FAMILY, 9, "bold"),
@@ -332,6 +350,20 @@ class KioskApp:
                 else:
                     self.lbl_battery.configure(text="Bat: AC 🔌")
                     self.bar_battery.set_value(100)
+
+            # Firewall Status
+            fw_active = self.get_firewall_status()
+            if fw_active:
+                self.lbl_firewall.configure(text="🧱 FW: ON", fg="#10b981")
+            else:
+                self.lbl_firewall.configure(text="🧱 FW: OFF", fg="#ef4444")
+
+            # dnsmasq Status
+            dns_active = self.get_dnsmasq_status()
+            if dns_active:
+                self.lbl_dnsmasq.configure(text="🌐 DNS: ON", fg="#10b981")
+            else:
+                self.lbl_dnsmasq.configure(text="🌐 DNS: OFF", fg="#ef4444")
         except Exception as e:
             print(f"Error updating stats: {e}")
             
@@ -423,6 +455,50 @@ class KioskApp:
             result = s.connect_ex(("127.0.0.1", 22))
             s.close()
             return result == 0
+        except Exception:
+            return False
+
+    def get_firewall_status(self):
+        try:
+            if os.name == 'nt':
+                # Check Windows firewall status
+                out = subprocess.check_output(["netsh", "advfirewall", "show", "allprofiles", "state"], text=True, errors='ignore')
+                return "ON" in out
+            else:
+                # Check Linux firewall (ufw or firewalld)
+                try:
+                    res = subprocess.check_output(["systemctl", "is-active", "ufw"], text=True, errors='ignore').strip()
+                    if res == "active":
+                        return True
+                except Exception:
+                    pass
+                
+                try:
+                    res = subprocess.check_output(["systemctl", "is-active", "firewalld"], text=True, errors='ignore').strip()
+                    if res == "active":
+                        return True
+                except Exception:
+                    pass
+                
+                return False
+        except Exception:
+            return False
+
+    def get_dnsmasq_status(self):
+        try:
+            if os.name == 'nt':
+                # Check Windows process lists for dnsmasq
+                for proc in psutil.process_iter(['name']):
+                    if proc.info['name'] and 'dnsmasq' in proc.info['name'].lower():
+                        return True
+                return False
+            else:
+                # Check Linux dnsmasq service
+                try:
+                    res = subprocess.check_output(["systemctl", "is-active", "dnsmasq"], text=True, errors='ignore').strip()
+                    return res == "active"
+                except Exception:
+                    return False
         except Exception:
             return False
 
