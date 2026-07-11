@@ -466,6 +466,16 @@ class KioskApp:
                 return "ON" in out
             else:
                 # Check Linux firewall (ufw or firewalld)
+                # First check ufw configuration file (reliable way to check if ufw is enabled or disabled without sudo)
+                try:
+                    if os.path.exists("/etc/ufw/ufw.conf"):
+                        with open("/etc/ufw/ufw.conf", "r") as f:
+                            for line in f:
+                                if line.strip().startswith("ENABLED="):
+                                    return line.split("=")[1].strip().lower() == "yes"
+                except Exception:
+                    pass
+
                 try:
                     res = subprocess.check_output(["systemctl", "is-active", "ufw"], text=True, errors='ignore').strip()
                     if res == "active":
