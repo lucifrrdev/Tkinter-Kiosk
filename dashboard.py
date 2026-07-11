@@ -134,7 +134,7 @@ class KioskApp:
             bg="#1e293b", 
             fg="#f8fafc"
         )
-        self.lbl_title.pack(side="left", padx=10, pady=5)
+        self.lbl_title.pack(side="left", padx=5, pady=5)
 
         self.ip_address = self.get_ip_address()
         self.lbl_ip = tk.Label(
@@ -144,25 +144,25 @@ class KioskApp:
             bg="#1e293b",
             fg="#94a3b8"
         )
-        self.lbl_ip.pack(side="left", padx=15, pady=5)
+        self.lbl_ip.pack(side="left", padx=6, pady=5)
 
         self.lbl_firewall = tk.Label(
             self.header,
-            text="🧱 FW: ...",
+            text="FW: ...",
             font=(FONT_FAMILY, 9, "bold"),
             bg="#1e293b",
             fg="#94a3b8"
         )
-        self.lbl_firewall.pack(side="left", padx=15, pady=5)
+        self.lbl_firewall.pack(side="left", padx=6, pady=5)
 
         self.lbl_dnsmasq = tk.Label(
             self.header,
-            text="🌐 DNS: ...",
+            text="DNS: ...",
             font=(FONT_FAMILY, 9, "bold"),
             bg="#1e293b",
             fg="#94a3b8"
         )
-        self.lbl_dnsmasq.pack(side="left", padx=15, pady=5)
+        self.lbl_dnsmasq.pack(side="left", padx=6, pady=5)
 
         self.lbl_clock = tk.Label(
             self.header,
@@ -170,7 +170,7 @@ class KioskApp:
             bg="#1e293b",
             fg="#38bdf8"
         )
-        self.lbl_clock.pack(side="right", padx=10, pady=5)
+        self.lbl_clock.pack(side="right", padx=6, pady=5)
         self.update_clock()
 
         # ------------------- CONTENT FRAME -------------------
@@ -297,7 +297,7 @@ class KioskApp:
         self.reset_screensaver_timer()
 
     def update_clock(self):
-        now = datetime.now().strftime("%d-%m-%Y  %H:%M:%S")
+        now = datetime.now().strftime("%d-%m  %H:%M:%S")
         self.lbl_clock.configure(text=now)
         self.window.after(1000, self.update_clock)
 
@@ -354,16 +354,16 @@ class KioskApp:
             # Firewall Status
             fw_active = self.get_firewall_status()
             if fw_active:
-                self.lbl_firewall.configure(text="🧱 FW: ON", fg="#10b981")
+                self.lbl_firewall.configure(text="FW: ON", fg="#10b981")
             else:
-                self.lbl_firewall.configure(text="🧱 FW: OFF", fg="#ef4444")
+                self.lbl_firewall.configure(text="FW: OFF", fg="#ef4444")
 
             # dnsmasq Status
             dns_active = self.get_dnsmasq_status()
             if dns_active:
-                self.lbl_dnsmasq.configure(text="🌐 DNS: ON", fg="#10b981")
+                self.lbl_dnsmasq.configure(text="DNS: ON", fg="#10b981")
             else:
-                self.lbl_dnsmasq.configure(text="🌐 DNS: OFF", fg="#ef4444")
+                self.lbl_dnsmasq.configure(text="DNS: OFF", fg="#ef4444")
         except Exception as e:
             print(f"Error updating stats: {e}")
             
