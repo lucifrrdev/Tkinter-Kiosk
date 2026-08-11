@@ -29,11 +29,19 @@ class KioskApp:
         if "--screen 2" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "--screen"):
             # Posisi monitor kedua dimulai dari koordinat X=1920 (lebar monitor pertama)
             self.window.geometry("480x320+1920+0") 
-            self.window.attributes('-fullscreen', True)
+            if os.name == 'nt':
+                self.window.attributes('-fullscreen', True)
+            else:
+                self.window.overrideredirect(True)
+                self.window.focus_force()
         else:
             # Jika mode single monitor (Hanya LCD 3.5 inci)
             self.window.geometry("480x320+0+0")
-            self.window.attributes('-fullscreen', True)
+            if os.name == 'nt':
+                self.window.attributes('-fullscreen', True)
+            else:
+                self.window.overrideredirect(True)
+                self.window.focus_force()
             
         self.window.configure(bg="#0f172a") # Dark Slate 900
 
