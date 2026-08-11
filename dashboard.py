@@ -18,7 +18,6 @@ from system_services import (
     toggle_ssh,
     _get_linux_terminal
 )
-from wifi_dialog import WiFiDialog
 from screensaver import ScreensaverManager
 
 class KioskApp:
@@ -122,10 +121,10 @@ class KioskApp:
             self.content, 
             icon="📶", 
             title="WIFI SETUP", 
-            subtitle="Jaringan Jarak Jauh",
+            subtitle="nmtui Panel",
             bg_color="#6d28d9",
             hover_color="#5b21b6",
-            command=self.show_wifi_dialog
+            command=self.switch_to_wifi_setup
         )
         self.btn_wifi.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
 
@@ -209,7 +208,6 @@ class KioskApp:
 
         # ------------------- SCREENSAVER MANAGER -------------------
         self.screensaver_manager = ScreensaverManager(self.window)
-        self.wifi_dialog = None
 
     def update_clock(self):
         now = datetime.now().strftime("%d-%m  %H:%M:%S")
@@ -383,21 +381,42 @@ class KioskApp:
             except Exception as e:
                 messagebox.showerror("Error SSH", f"Gagal mengontrol SSH: {e}")
 
-    def show_wifi_dialog(self):
-        self.screensaver_manager.stop_timer()
-        self.wifi_dialog = WiFiDialog(
-            parent=self.window,
-            on_connect_cb=self.on_wifi_connect,
-            on_close_cb=self.on_wifi_close
-        )
+    def switch_to_wifi_setup(self):
+        try:
+            if os.name == 'nt':
+                # Windows fallback: buka cmd running nmtui if possible
+                subprocess.Popen(["cmd.exe", "/c", "start", "cmd.exe", "/k", "nmtui"])
+            else:
+                import shutil
+                if not shutil.which("nmtui"):
+                    messagebox.showerror(
+                        "NMTUI Tidak Ditemukan",
+                        "Aplikasi nmtui belum terinstall di sistem Anda."
+                    )
+                    return
 
-    def on_wifi_connect(self, new_ip, ssid):
-        self.ip_address = new_ip
-        self.lbl_ip.configure(text=f"IP: {self.ip_address}")
-
-    def on_wifi_close(self):
-        self.wifi_dialog = None
-        self.screensaver_manager.start_timer()
+                # Buka NMTUI secara fullscreen menggunakan terminal emulator
+                term = _get_linux_terminal()
+                if term:
+                    if term == "lxterminal":
+                        subprocess.Popen([term, "--fullscreen", "-e", "nmtui"])
+                    elif term == "xterm":
+                        subprocess.Popen([term, "-fullscreen", "-e", "nmtui"])
+                    elif term == "xfce4-terminal":
+                        subprocess.Popen([term, "--fullscreen", "-e", "nmtui"])
+                    elif term == "gnome-terminal":
+                        subprocess.Popen([term, "--fullscreen", "--", "nmtui"])
+                    elif term == "konsole":
+                        subprocess.Popen([term, "--fullscreen", "-e", "nmtui"])
+                    else:
+                        subprocess.Popen([term, "-e", "nmtui"])
+                else:
+                    messagebox.showerror(
+                        "Terminal Tidak Ditemukan", 
+                        "Tidak ada terminal emulator untuk menjalankan nmtui."
+                    )
+        except Exception as e:
+            messagebox.showerror("Error WIFI Setup", f"Gagal membuka NMTUI: {e}")
 
 # Menjalankan aplikasi
 if __name__ == "__main__":
